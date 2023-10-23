@@ -10,18 +10,21 @@ function deg2rad(angle) {
 }
 
 
+let horizontalLinesAmount = 0;
+let verticalLinesAmount = 0;
 // Constructor
 function Model(name) {
     this.name = name;
     this.iVertexBuffer = gl.createBuffer();
     this.count = 0;
+    this.verticesLength = 0;
 
     this.BufferData = function(vertices) {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
 
-        this.count = vertices.length/3;
+        this.verticesLength  = vertices.length;
     }
 
     this.Draw = function() {
@@ -30,7 +33,15 @@ function Model(name) {
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
 
-        gl.drawArrays(gl.LINE_STRIP, 0, this.count);
+        // horizontal lines
+        for (let i = 0; i < horizontalLinesAmount; i++ ) {
+            gl.drawArrays(gl.LINE_STRIP, verticalLinesAmount * i, verticalLinesAmount);
+        }
+
+        // vertical lines
+        for (let i = 0; i < verticalLinesAmount; i++ ) {
+            gl.drawArrays(gl.LINE_STRIP, this.verticesLength / 6 + (horizontalLinesAmount * i), horizontalLinesAmount);
+        }
     }
 }
 
@@ -88,63 +99,35 @@ function draw() {
 
 function CreateSurfaceData()
 {
-    const sin = Math.sin;
-    const cos = Math.cos;
-
     let vertexList = [];
     let scale = 0.1;
+    let R2 = 4;
+    let R1 = 1.3 * R2;
+    const a = R2 - R1;
+    const c = 4 * R1;
+    const b = c;
 
-    // Surface of Revolution "Wellenkugel"
-    for (let u = 0; u <= 14.5; u += 1) {
-        for (let v = 0; v <= 1.5 * Math.PI; v += 0.1) {
-            const x = u * Math.cos((Math.cos(deg2rad(u)))) * Math.cos(v) * scale;
-            const y = u * Math.cos((Math.cos(deg2rad(u)))) * Math.sin(v)  * scale;
-            const z = u * Math.sin((Math.cos(deg2rad(u)))) * scale;
-            vertexList.push(x, y, z);
+    //  Surface of Conjugation of Coaxial Cylinder and Cone
+    for (let z = 0; z < b; z += 0.5) {
+        for (let beta = 0; beta <= 2 * Math.PI; beta += 0.2) {
+            const r = a * (1 - Math.cos(2 * Math.PI * z / c)) + R1;
+            const x = r * Math.cos(beta);
+            const y = r * Math.sin(beta);
+            vertexList.push(x * scale, y * scale, z * scale);
         }
+        horizontalLinesAmount++;
     }
 
-    // Schleife
-    // scale = 0.8;
-    // for (let u = -Math.PI; u <= Math.PI; u += 0.1) {
-    //     for (let v = -Math.PI; v <= Math.PI; v += 0.1) {
-    //         const x = sin(v) * cos(u) * scale;
-    //         const y = 2 * cos(v)  * scale;
-    //         const z = 4 * sin(v) * cos(v)  * scale;
-    //         vertexList.push(x, y, z);
-    //     }
-    // }
-    //
-    // for (let v = -Math.PI; v <= Math.PI; v += 0.1) {
-    //     for (let u = -Math.PI; u <= Math.PI; u += 0.1) {
-    //         const x = sin(v) * cos(u) * scale;
-    //         const y = 2 * cos(v)  * scale;
-    //         const z = 4 * sin(v) * cos(v)  * scale;
-    //         vertexList.push(x, y, z);
-    //
-    //     }
-    // }
+    for (let beta = 0; beta <= 2 * Math.PI; beta += 0.2) {
+        for (let z = 0; z < b; z += 0.5) {
+            const r = a * (1 - Math.cos(2 * Math.PI * z / c)) + R1;
+            const x = r * Math.cos(beta);
+            const y = r * Math.sin(beta);
+            vertexList.push(x * scale, y * scale, z * scale);
+        }
+        verticalLinesAmount++;
+    }
 
-
-    // Elliptic Torus
-    // scale = 0.5
-    // for (let u = 0; u <= 2 * Math.PI; u += 0.05) {
-    //     for (let v = 0; v <= 2 * Math.PI; v += 0.1) {
-    //         const x = ((3 + cos(v)) * cos(u)) * scale;
-    //         const y = ((3 + cos(v)) * sin(u)) * scale;
-    //         const z = (sin(v) + cos(v))  * scale;
-    //         vertexList.push(x, y, z);
-    //     }
-    // }
-    //
-    // for (let v = 0; v <= 2 * Math.PI; v += 0.1) {
-    //     for (let u = 0; u <= 2 * Math.PI; u += 0.05) {
-    //         const x = ((3 + cos(v)) * cos(u)) * scale;
-    //         const y = ((3 + cos(v)) * sin(u)) * scale;
-    //         const z = (sin(v) + cos(v))  * scale;
-    //         vertexList.push(x, y, z);
-    //     }
-    // }
     return vertexList;
 }
 
