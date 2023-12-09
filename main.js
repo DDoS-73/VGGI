@@ -103,9 +103,9 @@ function draw(lightPos) {
     surface.Draw();
 }
 
-let startX = -8;
+let startX = -20;
 let startY = 20;
-let startZ = 10;
+let startZ = 0;
 
 let endX = -3;
 let endY = 0;
@@ -114,13 +114,13 @@ let endZ = 10;
 let lightX = startX;
 let lightY = startY;
 let lightZ = startZ;
-// Крок для анімації
-let shift = 0.003;
+
+let shift = 0.005;
 
 
 const step = {
-    _value: 0.01,
-    shift: 0.005,
+    _value: 0.001,
+    shift: shift,
     set step(value) {
         if(this._value > 1) {
             this.shift = -shift

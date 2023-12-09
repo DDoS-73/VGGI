@@ -1,9 +1,10 @@
 # WebGL
 
-PA 1 
+PA 3 
 
 Surface of Conjugation of Coaxial Cylinder and Cone
 
-![img.png](img.png)
+Here you can see how the light moves along a parabola, 
+coming to the surface and moves away from the surface
 
-![img_1.png](img_1.png)
+![pa3.gif](pa3.gif)
