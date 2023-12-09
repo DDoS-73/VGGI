@@ -71,7 +71,7 @@ function ShaderProgram(name, program) {
  * (Note that the use of the above drawPrimitive function is not an efficient
  * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
  */
-function draw(lightPos) {
+function draw() {
     gl.clearColor(0,0,0,1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -98,51 +98,9 @@ function draw(lightPos) {
 
     gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalMatrix);
 
-    gl.uniform3fv(shProgram.iLightPos, lightPos);
+    gl.uniform3fv(shProgram.iLightPos, [3, 0, 0]);
 
     surface.Draw();
-}
-
-let startX = -8;
-let startY = 20;
-let startZ = 10;
-
-let endX = -3;
-let endY = 0;
-let endZ = 10;
-
-let lightX = startX;
-let lightY = startY;
-let lightZ = startZ;
-// Крок для анімації
-let shift = 0.003;
-
-
-const step = {
-    _value: 0.01,
-    shift: 0.005,
-    set step(value) {
-        if(this._value > 1) {
-            this.shift = -shift
-        }
-        if(this._value < 0) {
-            this.shift = shift
-        }
-        this._value += this.shift;
-    },
-    get step() {
-        return this._value;
-    }
-}
-
-function anim() {
-    lightX = startX + (endX - startX) * step.step;
-    lightY = startY + (endY - startY) * Math.pow((lightX - startX) / (endX - startX), 2);
-    lightZ = startZ + (endZ - startZ) * step.step;
-
-    step.step = shift;
-    draw([lightX, lightY, lightZ])
-    window.requestAnimationFrame(anim)
 }
 
 function CreateSurfaceData() {
@@ -300,5 +258,5 @@ function init() {
 
     spaceball = new TrackballRotator(canvas, draw, 0);
 
-    window.requestAnimationFrame(anim);
+    draw()
 }
