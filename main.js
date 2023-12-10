@@ -53,13 +53,14 @@ function ShaderProgram(name, program) {
     this.iAttribVertex = -1;
     // Location of the uniform matrix representing the combined transformation.
     this.iModelViewProjectionMatrix = -1;
+    this.iModelViewInverseTranspose = -1;
 
     // Normals
     this.iNormal = -1;
-    this.iNormalMatrix = -1;
 
     // Light position
     this.iLightPos = -1;
+    this.iCamPosition = -1;
 
     this.Use = function() {
         gl.useProgram(this.prog);
@@ -71,7 +72,7 @@ function ShaderProgram(name, program) {
  * (Note that the use of the above drawPrimitive function is not an efficient
  * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
  */
-function draw(lightPos) {
+function draw() {
     gl.clearColor(0,0,0,1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -80,25 +81,24 @@ function draw(lightPos) {
 
     /* Get the view matrix from the SimpleRotator object.*/
     let modelView = spaceball.getViewMatrix();
-
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0.7);
     let translateToPointZero = m4.translation(0,0,-10);
 
     let matAccum0 = m4.multiply(rotateToPointZero, modelView );
     let matAccum1 = m4.multiply(translateToPointZero, matAccum0 );
 
-    const modelviewInv = m4.inverse(matAccum1, new Float32Array(16));
-    const normalMatrix = m4.transpose(modelviewInv, new Float32Array(16));
-
     /* Multiply the projection matrix times the modelview matrix to give the
        combined transformation matrix, and send that to the shader program. */
     let modelViewProjection = m4.multiply(projection, matAccum1 );
 
+    const modelviewInv = m4.inverse(matAccum1, new Float32Array(16));
+    const modelviewInvTranspose = m4.transpose(modelviewInv, new Float32Array(16));
+
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection );
+    gl.uniformMatrix4fv(shProgram.iModelViewInverseTranspose, false, modelviewInvTranspose);
 
-    gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalMatrix);
-
-    gl.uniform3fv(shProgram.iLightPos, lightPos);
+    gl.uniform3fv(shProgram.iLightPos, [3, 0, 0]);
+    gl.uniform3fv(shProgram.iCamPosition, [0, 0, -20]);
 
     surface.Draw();
 }
@@ -224,11 +224,12 @@ function initGL() {
 
     shProgram.iAttribVertex              = gl.getAttribLocation(prog, "vertex");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
+    shProgram.iModelViewInverseTranspose = gl.getUniformLocation(prog, "ModelViewInverseTranspose");
 
     shProgram.iNormal                    = gl.getAttribLocation(prog, 'normal');
-    shProgram.iNormalMatrix              = gl.getUniformLocation(prog, 'NormalMatrix');
 
     shProgram.iLightPos                  = gl.getUniformLocation(prog, 'lightPosition');
+    shProgram.iCamPosition                  = gl.getUniformLocation(prog, 'CamPosition');
 
     surface = new Model('Surface');
     const data = CreateSurfaceData();
@@ -300,5 +301,5 @@ function init() {
 
     spaceball = new TrackballRotator(canvas, draw, 0);
 
-    window.requestAnimationFrame(anim);
+    draw()
 }
