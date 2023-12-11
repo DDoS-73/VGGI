@@ -39,9 +39,29 @@ uniform vec3 lightPosition;
 void main() {
     vec3 N = normalize(normalAdjusted);
     vec3 L = normalize(lightPosition);
-    vec3 reflectLighDir = normalize(reflect(L, N));
+    vec3 reflectLighDir = normalize(reflect(-L, N));
     vec3 ambient = Ka * ambientColor;
-    vec3 diffuse = Kd * diffuseColor * max(0.0, dot(N, -L));
+    vec3 diffuse = Kd * diffuseColor * max(0.0, dot(N, L));
     vec3 specular = Ks * specularColor * pow(max(0.0, dot(camViewDir, reflectLighDir)), shininessVal);
     gl_FragColor = vec4(ambient + diffuse + specular, 1.0);
+}`;
+
+
+
+// Vertex shader for Point
+const vertexShaderPoint = `
+ attribute vec2 point;
+
+ void main() {
+    gl_Position = vec4(point, 0.0, 1.0);
+  }`;
+
+const fragmentShaderPoint = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+   precision highp float;
+#else
+   precision mediump float;
+#endif
+void main() {
+   gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }`;

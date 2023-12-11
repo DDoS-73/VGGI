@@ -3,8 +3,10 @@
 let gl;                         // The webgl context.
 let surface;                    // A surface model
 let shProgram;                  // A shader program
+let shLine;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
-let lightPositionEl;
+let lineProg
+let lightLine;
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
@@ -29,7 +31,6 @@ function Model(name) {
     }
 
     this.Draw = function() {
-
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
@@ -39,6 +40,26 @@ function Model(name) {
         gl.enableVertexAttribArray(shProgram.iNormal);
 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.count);
+    }
+}
+
+function LineModel(name) {
+    this.name = name;
+    this.iVertexBuffer = gl.createBuffer();
+
+    this.Draw = function() {
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+        const positions = [
+            0, 0,   // Start point
+            10, 10, // End point
+        ];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+        gl.vertexAttribPointer(shLine.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shLine.iAttribVertex);
+
+        gl.drawArrays(gl.LINE_STRIP, 0, 2);
     }
 }
 
@@ -72,7 +93,8 @@ function ShaderProgram(name, program) {
  * (Note that the use of the above drawPrimitive function is not an efficient
  * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
  */
-function draw() {
+function draw(lightPos) {
+    shProgram.Use();
     gl.clearColor(0,0,0,1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -97,10 +119,13 @@ function draw() {
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection );
     gl.uniformMatrix4fv(shProgram.iModelViewInverseTranspose, false, modelviewInvTranspose);
 
-    gl.uniform3fv(shProgram.iLightPos, [3, 0, 0]);
+    gl.uniform3fv(shProgram.iLightPos, lightPos);
     gl.uniform3fv(shProgram.iCamPosition, [0, 0, -20]);
 
     surface.Draw();
+
+    shLine.Use();
+    lightLine.Draw();
 }
 
 let startX = -20;
@@ -214,13 +239,11 @@ function createPoint(beta, z) {
     return {x, y, z};
 }
 
-
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
     let prog = createProgram( gl, vertexShaderSource, fragmentShaderSource );
 
     shProgram = new ShaderProgram('Basic', prog);
-    shProgram.Use();
 
     shProgram.iAttribVertex              = gl.getAttribLocation(prog, "vertex");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
@@ -231,7 +254,12 @@ function initGL() {
     shProgram.iLightPos                  = gl.getUniformLocation(prog, 'lightPosition');
     shProgram.iCamPosition                  = gl.getUniformLocation(prog, 'CamPosition');
 
+    lineProg = createProgram( gl, vertexShaderPoint, fragmentShaderPoint );
+    shLine = new ShaderProgram('Basic', lineProg);
+    shLine.iAttribVertex = gl.getAttribLocation(lineProg, 'point');
+
     surface = new Model('Surface');
+    lightLine = new LineModel('Line');
     const data = CreateSurfaceData();
     surface.BufferData(data.vertices, data.normal);
 
@@ -275,8 +303,6 @@ function createProgram(gl, vShader, fShader) {
  * initialization function that will be called when the page has loaded
  */
 function init() {
-    lightPositionEl = document.getElementById('lightPostion');
-
     let canvas;
     try {
         canvas = document.getElementById("webglcanvas");
@@ -301,5 +327,5 @@ function init() {
 
     spaceball = new TrackballRotator(canvas, draw, 0);
 
-    draw()
+    window.requestAnimationFrame(anim);
 }
