@@ -48,20 +48,26 @@ void main() {
 
 
 
-// Vertex shader for Point
-const vertexShaderPoint = `
- attribute vec2 point;
+// Vertex shader for Line
+const LineVertexShader = `
+attribute vec3 vertex;
+uniform mat4 ModelViewProjectionMatrix;
 
- void main() {
-    gl_Position = vec4(point, 0.0, 1.0);
-  }`;
+void main() {
+    gl_Position = ModelViewProjectionMatrix * vec4(vertex,1.0);
+    gl_PointSize = 15.0;
+}`;
 
-const fragmentShaderPoint = `
+
+// Fragment shader for Line
+const LineFragmentShader = `
 #ifdef GL_FRAGMENT_PRECISION_HIGH
    precision highp float;
 #else
    precision mediump float;
 #endif
+
+uniform vec4 color;
 void main() {
-   gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    gl_FragColor = color;
 }`;

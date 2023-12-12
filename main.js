@@ -5,7 +5,6 @@ let surface;                    // A surface model
 let shProgram;                  // A shader program
 let shLine;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
-let lineProg
 let lightLine;
 
 function deg2rad(angle) {
@@ -47,21 +46,34 @@ function LineModel(name) {
     this.name = name;
     this.iVertexBuffer = gl.createBuffer();
 
-    this.Draw = function() {
+    this.Draw = function(lightPos, lineCoord) {
+        shLine.Use();
+
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
-        const positions = [
-            0, 0,   // Start point
-            10, 10, // End point
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineCoord), gl.STREAM_DRAW);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shLine.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shLine.iAttribVertex);
 
+        gl.uniform4fv(shLine.iColor, [0,1,1,1] );
+
         gl.drawArrays(gl.LINE_STRIP, 0, 2);
+
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lightPos), gl.STREAM_DRAW);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
+        gl.vertexAttribPointer(shLine.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shLine.iAttribVertex);
+
+        gl.uniform4fv(shLine.iColor, [1,0,0,1] );
+
+        gl.drawArrays(gl.POINTS, 0, 1);
     }
 }
+
 
 
 // Constructor
@@ -82,6 +94,7 @@ function ShaderProgram(name, program) {
     // Light position
     this.iLightPos = -1;
     this.iCamPosition = -1;
+    this.iColor = -1;
 
     this.Use = function() {
         gl.useProgram(this.prog);
@@ -93,26 +106,25 @@ function ShaderProgram(name, program) {
  * (Note that the use of the above drawPrimitive function is not an efficient
  * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
  */
-function draw(lightPos) {
-    shProgram.Use();
+function draw(lightPos, lindeCoord) {
     gl.clearColor(0,0,0,1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    /* Set the values of the projection transformation */
     let projection = m4.orthographic(-20, 20, -20, 20, -20, 20);
-
-    /* Get the view matrix from the SimpleRotator object.*/
     let modelView = spaceball.getViewMatrix();
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0.7);
-    let translateToPointZero = m4.translation(0,0,-10);
+    let translateToPointZero = m4.translation(0,0,0);
 
     let matAccum0 = m4.multiply(rotateToPointZero, modelView );
     let matAccum1 = m4.multiply(translateToPointZero, matAccum0 );
 
-    /* Multiply the projection matrix times the modelview matrix to give the
-       combined transformation matrix, and send that to the shader program. */
     let modelViewProjection = m4.multiply(projection, matAccum1 );
 
+    shLine.Use();
+    gl.uniformMatrix4fv(shLine.iModelViewProjectionMatrix, false, modelViewProjection );
+    lightLine.Draw(lightPos, lindeCoord);
+
+    shProgram.Use();
     const modelviewInv = m4.inverse(matAccum1, new Float32Array(16));
     const modelviewInvTranspose = m4.transpose(modelviewInv, new Float32Array(16));
 
@@ -120,40 +132,39 @@ function draw(lightPos) {
     gl.uniformMatrix4fv(shProgram.iModelViewInverseTranspose, false, modelviewInvTranspose);
 
     gl.uniform3fv(shProgram.iLightPos, lightPos);
-    gl.uniform3fv(shProgram.iCamPosition, [0, 0, -20]);
+    gl.uniform3fv(shProgram.iCamPosition, [0, 0, -10]);
 
     surface.Draw();
-
-    shLine.Use();
-    lightLine.Draw();
 }
-
-let startX = -20;
-let startY = 20;
+// [0, 15, 20]
+// [0, 40, 10]
+// [0, 8, 0]
+let startX = 0;
+let startY = 8;
 let startZ = 0;
 
-let endX = -3;
-let endY = 0;
-let endZ = 10;
+let endX = 0;
+let endY = 8;
+let endZ = 20;
 
 let lightX = startX;
 let lightY = startY;
 let lightZ = startZ;
 
-let shift = 0.005;
+let shift = 0.05;
 
 
 const step = {
-    _value: 0.001,
+    _value: 0.05,
     shift: shift,
     set step(value) {
-        if(this._value > 1) {
+        if(lightZ > endZ) {
             this.shift = -shift
         }
-        if(this._value < 0) {
+        if(lightZ < startZ) {
             this.shift = shift
         }
-        this._value += this.shift;
+        this._value = this.shift;
     },
     get step() {
         return this._value;
@@ -161,12 +172,12 @@ const step = {
 }
 
 function anim() {
-    lightX = startX + (endX - startX) * step.step;
-    lightY = startY + (endY - startY) * Math.pow((lightX - startX) / (endX - startX), 2);
-    lightZ = startZ + (endZ - startZ) * step.step;
+    lightX = 0;
+    lightY = -0.28 * Math.pow(lightZ, 2) + 5.2 * lightZ + 8;
+    lightZ = lightZ + step.step;
 
     step.step = shift;
-    draw([lightX, lightY, lightZ])
+    draw([lightX, lightY, lightZ], [0, 0, 0, lightX, lightY, lightZ])
     window.requestAnimationFrame(anim)
 }
 
@@ -244,22 +255,22 @@ function initGL() {
     let prog = createProgram( gl, vertexShaderSource, fragmentShaderSource );
 
     shProgram = new ShaderProgram('Basic', prog);
-
     shProgram.iAttribVertex              = gl.getAttribLocation(prog, "vertex");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iModelViewInverseTranspose = gl.getUniformLocation(prog, "ModelViewInverseTranspose");
-
     shProgram.iNormal                    = gl.getAttribLocation(prog, 'normal');
-
     shProgram.iLightPos                  = gl.getUniformLocation(prog, 'lightPosition');
     shProgram.iCamPosition                  = gl.getUniformLocation(prog, 'CamPosition');
 
-    lineProg = createProgram( gl, vertexShaderPoint, fragmentShaderPoint );
-    shLine = new ShaderProgram('Basic', lineProg);
-    shLine.iAttribVertex = gl.getAttribLocation(lineProg, 'point');
+    prog = createProgram( gl, LineVertexShader, LineFragmentShader );
+    shLine = new ShaderProgram('Line', prog);
+    shLine.iAttribVertex = gl.getAttribLocation(prog, 'vertex');
+    shLine.iColor = gl.getUniformLocation(prog, 'color');
+    shLine.iModelViewProjectionMatrix = gl.getUniformLocation(prog, 'ModelViewProjectionMatrix');
+
+    lightLine = new LineModel('Line');
 
     surface = new Model('Surface');
-    lightLine = new LineModel('Line');
     const data = CreateSurfaceData();
     surface.BufferData(data.vertices, data.normal);
 
@@ -327,5 +338,6 @@ function init() {
 
     spaceball = new TrackballRotator(canvas, draw, 0);
 
-    window.requestAnimationFrame(anim);
+    // draw();
+    window.requestAnimationFrame(anim)
 }
